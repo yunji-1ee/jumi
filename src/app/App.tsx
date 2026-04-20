@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GiftBox } from './components/GiftBox';
 import { BalloonsStage } from './components/BalloonsStage';
@@ -10,6 +10,58 @@ type Stage = 'gift-box' | 'balloons' | 'video' | 'final';
 export default function App() {
   const [currentStage, setCurrentStage] = useState<Stage>('balloons');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [musicStarted, setMusicStarted] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.volume = 0.35;
+  }, []);
+
+  useEffect(() => {
+    const startMusic = async () => {
+      if (!audioRef.current || musicStarted) return;
+
+      try {
+        await audioRef.current.play();
+        setMusicStarted(true);
+      } catch (error) {
+        console.log('BGM autoplay blocked:', error);
+      }
+    };
+
+    const handleFirstInteraction = () => {
+      startMusic();
+    };
+
+    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, [musicStarted]);
+
+  const toggleMusic = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      if (audioRef.current.paused) {
+        await audioRef.current.play();
+        setMusicStarted(true);
+        setIsMuted(false);
+      } else {
+        audioRef.current.pause();
+        setIsMuted(true);
+      }
+    } catch (error) {
+      console.log('BGM toggle failed:', error);
+    }
+  };
 
   const handleStageChange = (nextStage: Stage) => {
     setIsTransitioning(true);
@@ -31,11 +83,21 @@ export default function App() {
     handleStageChange('final');
   };
 
-  // 생일 선물 이미지 URL (Unsplash에서 가져온 이미지)
-  const giftImageUrl = "https://images.unsplash.com/photo-1764183298040-6859fef0b24b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiaXJ0aGRheSUyMGdpZnQlMjBzdXJwcmlzZSUyMGNlbGVicmF0aW9ufGVufDF8fHx8MTc3NjY3MjU5Nnww&ixlib=rb-4.1.0&q=80&w=1080";
-
   return (
-    <div className="w-full h-screen overflow-hidden">
+    <div className="w-full min-h-screen overflow-hidden relative">
+      {/* 전역 브금 */}
+      <audio ref={audioRef} loop preload="auto">
+        <source src="/bgm.mp3" type="audio/mpeg" />
+      </audio>
+
+      {/* 음악 버튼 */}
+      <button
+        onClick={toggleMusic}
+        className="fixed top-4 right-4 z-[100] bg-white/85 hover:bg-white px-4 py-2 rounded-full shadow-lg text-sm font-semibold text-pink-500"
+      >
+        {audioRef.current?.paused || isMuted ? '🎵 음악 켜기' : '🔇 음악 끄기'}
+      </button>
+
       <AnimatePresence mode="wait">
         {isTransitioning && (
           <motion.div
@@ -93,7 +155,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <FinalGift giftImageUrl={giftImageUrl} />
+            <FinalGift />
           </motion.div>
         )}
       </AnimatePresence>

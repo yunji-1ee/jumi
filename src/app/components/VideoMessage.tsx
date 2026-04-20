@@ -48,7 +48,7 @@ export function VideoMessage({ onVideoEnd }: VideoMessageProps) {
                 playsInline
                 muted
               >
-                <source src="/birthday-video.mp4" type="video/mp4" />
+                <source src="/birthday-video.MP4" type="video/mp4" />
               </video>
             </div>
 
